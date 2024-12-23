@@ -1,0 +1,35 @@
+# MATLAB specific
+*.asv
+*.m~
+*.mex*
+*.mat
+*.fig
+slprj/
+sccprj/
+codegen/
+*.autosave
+
+# Editor specific
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build and test artifacts
+*.log
+testresults/
+coverage/
+
+# Custom folders
+results/
+temp/
+cache/

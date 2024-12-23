@@ -1,0 +1,86 @@
+solid panel
+facet normal 0 0 -1
+  outer loop
+    vertex -0.200000 -0.150000 0.022030
+    vertex 0.200000 -0.150000 0.022030
+    vertex 0.200000 0.150000 0.022030
+  endloop
+endfacet
+facet normal 0 0 -1
+  outer loop
+    vertex -0.200000 -0.150000 0.022030
+    vertex 0.200000 0.150000 0.022030
+    vertex -0.200000 0.150000 0.022030
+  endloop
+endfacet
+facet normal 0 0 1
+  outer loop
+    vertex -0.200000 -0.150000 0.024030
+    vertex 0.200000 0.150000 0.024030
+    vertex 0.200000 -0.150000 0.024030
+  endloop
+endfacet
+facet normal 0 0 1
+  outer loop
+    vertex -0.200000 -0.150000 0.024030
+    vertex -0.200000 0.150000 0.024030
+    vertex 0.200000 0.150000 0.024030
+  endloop
+endfacet
+facet normal 0 -1 0
+  outer loop
+    vertex -0.200000 -0.150000 0.022030
+    vertex -0.200000 -0.150000 0.024030
+    vertex 0.200000 -0.150000 0.024030
+  endloop
+endfacet
+facet normal 0 -1 0
+  outer loop
+    vertex -0.200000 -0.150000 0.022030
+    vertex 0.200000 -0.150000 0.024030
+    vertex 0.200000 -0.150000 0.022030
+  endloop
+endfacet
+facet normal 0 1 0
+  outer loop
+    vertex -0.200000 0.150000 0.022030
+    vertex 0.200000 0.150000 0.024030
+    vertex -0.200000 0.150000 0.024030
+  endloop
+endfacet
+facet normal 0 1 0
+  outer loop
+    vertex -0.200000 0.150000 0.022030
+    vertex 0.200000 0.150000 0.022030
+    vertex 0.200000 0.150000 0.024030
+  endloop
+endfacet
+facet normal -1 0 0
+  outer loop
+    vertex -0.200000 -0.150000 0.022030
+    vertex -0.200000 0.150000 0.022030
+    vertex -0.200000 0.150000 0.024030
+  endloop
+endfacet
+facet normal -1 0 0
+  outer loop
+    vertex -0.200000 -0.150000 0.022030
+    vertex -0.200000 0.150000 0.024030
+    vertex -0.200000 -0.150000 0.024030
+  endloop
+endfacet
+facet normal 1 0 0
+  outer loop
+    vertex 0.200000 -0.150000 0.022030
+    vertex 0.200000 -0.150000 0.024030
+    vertex 0.200000 0.150000 0.024030
+  endloop
+endfacet
+facet normal 1 0 0
+  outer loop
+    vertex 0.200000 -0.150000 0.022030
+    vertex 0.200000 0.150000 0.024030
+    vertex 0.200000 0.150000 0.022030
+  endloop
+endfacet
+endsolid panel
