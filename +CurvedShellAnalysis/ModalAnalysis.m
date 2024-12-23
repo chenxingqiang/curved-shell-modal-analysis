@@ -1,356 +1,299 @@
 classdef ModalAnalysis < handle
-    % MODALANALYSIS Class for performing modal analysis on curved surfaces
+    % ModalAnalysis Class for modal analysis of curved shells
     
     properties
-        Surface  % Surface object
-        NumModes = 6  % Number of modes to compute
-        OutputFolder = 'ModalResults'  % Output folder for results
-        StiffnessMatrix  % Global stiffness matrix
-        MassMatrix  % Global mass matrix
-        DampingMatrix  % Global damping matrix
-        Frequencies  % Natural frequencies
-        ModesMatrix  % Mode shapes
-        DOFsPerNode = 5  % Degrees of freedom per node
+        Surface         % Surface object
+        NumModes        % Number of modes to compute
+        frequencies     % Natural frequencies
+        modes          % Mode shapes
+        mesh           % Mesh data
     end
     
     methods
-        function obj = ModalAnalysis(surface, numModes)
-            % Constructor
+        function obj = ModalAnalysis(surface, num_modes)
+            % Constructor for ModalAnalysis
             obj.Surface = surface;
-            if nargin > 1
-                obj.NumModes = numModes;
-            end
-            
-            % Create output folder if it doesn't exist
-            if ~exist(obj.OutputFolder, 'dir')
-                mkdir(obj.OutputFolder);
-            end
+            obj.NumModes = num_modes;
         end
         
         function analyze(obj)
-            % Perform complete modal analysis
+            % Perform modal analysis
             fprintf('开始模态分析...\n');
             
-            % Generate mesh
-            [X, Y, Z] = obj.Surface.generateMesh();
+            % Get mesh from surface
+            obj.mesh = obj.Surface.getMesh();
             
-            % Assemble matrices
-            obj.assembleMatrices(X, Y, Z);
+            % Get material properties
+            E = obj.Surface.E;
+            nu = obj.Surface.nu;
+            rho = obj.Surface.rho;
+            t = obj.Surface.t;
             
-            % Apply boundary conditions and solve
-            obj.solveEigenvalueProblem();
+            % Get mesh dimensions
+            [ny, nx] = size(obj.mesh.X);
+            ndof = 3;  % 3 DOF per node (u, v, w)
             
-            % Save results
-            obj.saveResults();
+            % Initialize matrices
+            n = nx * ny * ndof;
+            M = sparse(n, n);
+            K = sparse(n, n);
             
-            % Visualize results
-            obj.visualizeResults(X, Y, Z);
-            
-            fprintf('分析完成！结果已保存到 %s\n', obj.OutputFolder);
-        end
-        
-        function assembleMatrices(obj, X, Y, Z)
-            % Assemble global matrices
-            fprintf('正在组装全局矩阵...\n');
-            
-            nx = obj.Surface.nx;
-            ny = obj.Surface.ny;
-            N = nx * ny * obj.DOFsPerNode;
-            
-            % Initialize sparse matrices
-            obj.StiffnessMatrix = sparse(N, N);
-            obj.MassMatrix = sparse(N, N);
-            
-            h = waitbar(0, '组装单元矩阵...');
-            
-            % Assembly loop
+            % Assembly
+            fprintf('组装质量和刚度矩阵...\n');
             for i = 1:nx-1
                 for j = 1:ny-1
-                    % Update progress bar
-                    waitbar(((i-1)*(ny-1) + j)/((nx-1)*(ny-1)), h);
+                    % Element nodes
+                    nodes = [j+(i-1)*ny, j+1+(i-1)*ny, j+1+i*ny, j+i*ny];
                     
-                    % Get element nodes
-                    nodes = [j+(i-1)*ny, j+i*ny, j+1+i*ny, j+1+(i-1)*ny];
+                    % Element coordinates
+                    xe = obj.mesh.X(nodes([1,2,3,4]));
+                    ye = obj.mesh.Y(nodes([1,2,3,4]));
+                    ze = obj.mesh.Z(nodes([1,2,3,4]));
                     
-                    % Get element coordinates
-                    xe = X(nodes);
-                    ye = Y(nodes);
-                    ze = Z(nodes);
+                    % Element matrices
+                    [Me, Ke] = obj.elementMatrices(xe, ye, ze, E, nu, rho, t);
                     
-                    % Calculate element matrices
-                    [ke, me] = obj.calculateElementMatrices(xe, ye, ze);
-                    
-                    % Assemble into global matrices
+                    % Global DOFs
                     dofs = [];
-                    for n = nodes
-                        dofs = [dofs, (n-1)*obj.DOFsPerNode+1:n*obj.DOFsPerNode];
+                    for node = nodes
+                        dofs = [dofs, (node-1)*ndof+1:node*ndof];
                     end
                     
-                    obj.StiffnessMatrix(dofs,dofs) = obj.StiffnessMatrix(dofs,dofs) + ke;
-                    obj.MassMatrix(dofs,dofs) = obj.MassMatrix(dofs,dofs) + me;
+                    % Assembly
+                    M(dofs,dofs) = M(dofs,dofs) + Me;
+                    K(dofs,dofs) = K(dofs,dofs) + Ke;
                 end
             end
             
-            close(h);
+            % Apply boundary conditions
+            fprintf('应用边界条件...\n');
+            % Fix edges
+            fixed_nodes = [1:ny, ny*(nx-1)+1:ny*nx];  % First and last rows
+            fixed_dofs = [];
+            for node = fixed_nodes
+                fixed_dofs = [fixed_dofs, (node-1)*ndof+1:node*ndof];
+            end
+            free_dofs = setdiff(1:n, fixed_dofs);
+            
+            % Solve eigenvalue problem
+            fprintf('求解特征值问题...\n');
+            
+            % Add small stiffness to prevent singularity
+            K = K + sparse(1:n, 1:n, 1e-6*max(diag(K)), n, n);
+            
+            % Solve reduced system
+            Kr = K(free_dofs,free_dofs);
+            Mr = M(free_dofs,free_dofs);
+            
+            % Use shift-invert mode for better numerical stability
+            sigma = 1e-6;  % Small shift
+            [V, D] = eigs(Kr, Mr, obj.NumModes, sigma);
+            
+            % Store results
+            obj.frequencies = sqrt(diag(D))/(2*pi);
+            obj.modes = zeros(n, obj.NumModes);
+            obj.modes(free_dofs,:) = V;
         end
         
-        function [ke, me] = calculateElementMatrices(obj, xe, ye, ze)
-            % Calculate element stiffness and mass matrices
-            % This is a simplified implementation
+        function response = calculateTransientResponse(obj, F, t)
+            % Calculate transient response to force history F at times t
+            % F: Force history vector
+            % t: Time vector
             
-            % Element size
-            dx = abs(xe(2) - xe(1));
-            dy = abs(ye(4) - ye(1));
+            % Default damping ratio
+            zeta = 0.02;
             
-            % Material properties
+            % Initialize response
+            response = zeros(size(t));
+            
+            % Modal participation factors
+            for i = 1:obj.NumModes
+                % Natural frequency in rad/s
+                wn = 2*pi*obj.frequencies(i);
+                
+                % Damped natural frequency
+                wd = wn*sqrt(1-zeta^2);
+                
+                % Modal response using convolution integral
+                h = exp(-zeta*wn*t).*sin(wd*t)./(wd);  % Impulse response
+                y = conv(F, h);  % Convolution
+                y = y(1:length(t))*mean(diff(t));  % Truncate and scale
+                
+                % Add modal contribution
+                response = response + y;
+            end
+        end
+        
+        function energy = calculateModalEnergy(obj, mode_num)
+            % Calculate modal strain energy distribution for a given mode
+            % mode_num: Mode number to analyze
+            
+            % Get mesh dimensions
+            [ny, nx] = size(obj.mesh.X);
+            ndof = 3;  % 3 DOF per node (u, v, w)
+            
+            % Get material properties
             E = obj.Surface.E;
             nu = obj.Surface.nu;
             t = obj.Surface.t;
-            rho = obj.Surface.rho;
             
-            % Membrane stiffness
-            ke_membrane = E*t/(1-nu^2) * dx*dy/4 * [
-                4  2  0  2  1  0  1  0  0  2  1  0
-                2  4  0  1  2  0  0  1  0  1  2  0
-                0  0  1  0  0  0  0  0  0  0  0  0
-                2  1  0  4  2  0  2  1  0  1  0  0
-                1  2  0  2  4  0  1  2  0  0  1  0
-                0  0  0  0  0  1  0  0  0  0  0  0
-                1  0  0  2  1  0  4  2  0  2  1  0
-                0  1  0  1  2  0  2  4  0  1  2  0
-                0  0  0  0  0  0  0  0  1  0  0  0
-                2  1  0  1  0  0  2  1  0  4  2  0
-                1  2  0  0  1  0  1  2  0  2  4  0
-                0  0  0  0  0  0  0  0  0  0  0  1
-            ];
+            % Initialize energy field
+            energy = zeros(ny, nx);
             
-            % Bending stiffness
-            D = E*t^3/(12*(1-nu^2));
-            ke_bending = D*dx*dy/4 * [
-                4  1  1  0  1  0  0  0
-                1  4  0  1  0  1  0  0
-                1  0  4  1  0  0  1  0
-                0  1  1  4  0  0  0  1
-                1  0  0  0  4  1  1  0
-                0  1  0  0  1  4  0  1
-                0  0  1  0  1  0  4  1
-                0  0  0  1  0  1  1  4
-            ];
-            
-            % Combine membrane and bending
-            ke = zeros(20, 20);
-            ke(1:12, 1:12) = ke_membrane;
-            ke(13:20, 13:20) = ke_bending;
-            
-            % Mass matrix
-            me = zeros(20, 20);
-            
-            % Translational mass
-            me(1:12, 1:12) = rho*t*dx*dy/36 * [
-                4  0  0  2  0  0  1  0  0  2  0  0
-                0  4  0  0  2  0  0  1  0  0  2  0
-                0  0  4  0  0  2  0  0  1  0  0  2
-                2  0  0  4  0  0  2  0  0  1  0  0
-                0  2  0  0  4  0  0  2  0  0  1  0
-                0  0  2  0  0  4  0  0  2  0  0  1
-                1  0  0  2  0  0  4  0  0  2  0  0
-                0  1  0  0  2  0  0  4  0  0  2  0
-                0  0  1  0  0  2  0  0  4  0  0  2
-                2  0  0  1  0  0  2  0  0  4  0  0
-                0  2  0  0  1  0  0  2  0  0  4  0
-                0  0  2  0  0  1  0  0  2  0  0  4
-            ];
-            
-            % Rotational mass
-            me(13:20, 13:20) = rho*t^3*dx*dy/420 * [
-                16  0 -8   0  4  0 -8   0
-                 0 16  0  -8  0  4  0  -8
-                -8  0 16   0 -8  0  4   0
-                 0 -8  0  16  0 -8  0   4
-                 4  0 -8   0 16  0 -8   0
-                 0  4  0  -8  0 16  0  -8
-                -8  0  4   0 -8  0 16   0
-                 0 -8  0   4  0 -8  0  16
-            ];
-        end
-        
-        function solveEigenvalueProblem(obj)
-            % Solve the eigenvalue problem
-            fprintf('应用边界条件...\n');
-            
-            % Apply boundary conditions (fixed ends)
-            nx = obj.Surface.nx;
-            ny = obj.Surface.ny;
-            fixed_dofs = [];
-            for i = [1, nx]
-                for j = 1:ny
-                    n = j + (i-1)*ny;
-                    fixed_dofs = [fixed_dofs, (n-1)*obj.DOFsPerNode+1:n*obj.DOFsPerNode];
-                end
-            end
-            free_dofs = setdiff(1:size(obj.StiffnessMatrix,1), fixed_dofs);
-            
-            fprintf('求解特征值问题...\n');
-            [V, D] = eig(full(obj.StiffnessMatrix(free_dofs,free_dofs)), ...
-                        full(obj.MassMatrix(free_dofs,free_dofs)));
-            
-            % Extract frequencies and mode shapes
-            [obj.Frequencies, idx] = sort(sqrt(real(diag(D)))/(2*pi));
-            obj.Frequencies = obj.Frequencies(1:obj.NumModes);
-            
-            % Build complete mode shapes
-            V = V(:,idx);
-            obj.ModesMatrix = zeros(size(obj.StiffnessMatrix,1), obj.NumModes);
-            for i = 1:obj.NumModes
-                mode_free = V(:,i);
-                mode_full = zeros(size(obj.StiffnessMatrix,1), 1);
-                mode_full(free_dofs) = mode_free;
-                obj.ModesMatrix(:,i) = mode_full;
-            end
-            
-            % Calculate damping matrix
-            zeta = obj.Surface.zeta;
-            alpha = 2*zeta*sqrt(obj.Frequencies(1)*obj.Frequencies(end));
-            beta = 2*zeta/(sqrt(obj.Frequencies(1)*obj.Frequencies(end)));
-            obj.DampingMatrix = alpha*obj.MassMatrix + beta*obj.StiffnessMatrix;
-        end
-        
-        function saveResults(obj)
-            % Save analysis results to file
-            fid = fopen(fullfile(obj.OutputFolder, 'NaturalFrequencies.txt'), 'w');
-            
-            % Write header
-            fprintf(fid, '曲面板模态分析结果\n\n');
-            
-            % Write geometry parameters
-            fprintf(fid, '几何参数:\n');
-            fprintf(fid, '长度: %.3f m\n', obj.Surface.L);
-            fprintf(fid, '宽度: %.3f m\n', obj.Surface.W);
-            fprintf(fid, '厚度: %.3f m\n', obj.Surface.t);
-            
-            % Write surface-specific parameters
-            if isa(obj.Surface, 'CurvedShellAnalysis.SphericalSurface')
-                fprintf(fid, '曲率半径: %.3f m\n', obj.Surface.R);
-            elseif isa(obj.Surface, 'CurvedShellAnalysis.EllipsoidalSurface')
-                fprintf(fid, 'X方向曲率半径: %.3f m\n', obj.Surface.Rx);
-                fprintf(fid, 'Y方向曲率半径: %.3f m\n', obj.Surface.Ry);
-                fprintf(fid, 'Z方向曲率半径: %.3f m\n', obj.Surface.Rz);
-            end
-            
-            % Write material properties
-            fprintf(fid, '\n材料属性:\n');
-            fprintf(fid, '弹性模量: %.2e Pa\n', obj.Surface.E);
-            fprintf(fid, '密度: %.1f kg/m³\n', obj.Surface.rho);
-            fprintf(fid, '泊松比: %.2f\n', obj.Surface.nu);
-            fprintf(fid, '阻尼比: %.3f\n\n', obj.Surface.zeta);
-            
-            % Write frequencies
-            fprintf(fid, '前%d阶固有频率:\n', obj.NumModes);
-            for i = 1:obj.NumModes
-                fprintf(fid, '第%d阶: %.2f Hz\n', i, obj.Frequencies(i));
-            end
-            
-            % Write damping parameters
-            alpha = 2*obj.Surface.zeta*sqrt(obj.Frequencies(1)*obj.Frequencies(end));
-            beta = 2*obj.Surface.zeta/(sqrt(obj.Frequencies(1)*obj.Frequencies(end)));
-            fprintf(fid, '\n阻尼参数:\n');
-            fprintf(fid, 'α (质量比例系数): %.6e\n', alpha);
-            fprintf(fid, 'β (刚度比例系数): %.6e\n', beta);
-            
-            fclose(fid);
-        end
-        
-        function visualizeResults(obj, X, Y, Z)
-            % Visualize mode shapes and frequency response
-            fprintf('绘制模态振型...\n');
-            
-            % Plot each mode shape
-            for mode = 1:obj.NumModes
-                figure('Position', [100 100 800 600]);
-                
-                % Extract modal displacements
-                w = zeros(obj.Surface.ny, obj.Surface.nx);
-                for i = 1:obj.Surface.nx
-                    for j = 1:obj.Surface.ny
-                        n = j + (i-1)*obj.Surface.ny;
-                        w(j,i) = obj.ModesMatrix((n-1)*obj.DOFsPerNode+3, mode);
+            % Calculate strain energy at each element
+            for i = 1:nx-1
+                for j = 1:ny-1
+                    % Element nodes
+                    nodes = [j+(i-1)*ny, j+1+(i-1)*ny, j+1+i*ny, j+i*ny];
+                    
+                    % Element coordinates
+                    xe = obj.mesh.X(nodes([1,2,3,4]));
+                    ye = obj.mesh.Y(nodes([1,2,3,4]));
+                    ze = obj.mesh.Z(nodes([1,2,3,4]));
+                    
+                    % Element displacements
+                    dofs = [];
+                    for node = nodes
+                        dofs = [dofs, (node-1)*ndof+1:node*ndof];
                     end
+                    u_e = obj.modes(dofs,mode_num);
+                    
+                    % Calculate element strain energy
+                    [~, Ke] = obj.elementMatrices(xe, ye, ze, E, nu, 1, t);  % Use unit density
+                    e = 0.5 * u_e' * Ke * u_e;
+                    
+                    % Distribute energy to nodes
+                    energy(nodes) = energy(nodes) + e/4;  % Average to nodes
                 end
-                
-                % Normalize displacement
-                w = w/max(abs(w(:)));
-                
-                % Create deformed surface
-                Zdef = Z + w*0.1*max(abs(Z(:)));
-                
-                % 3D surface plot
-                subplot(2,2,[1,2]);
-                surf(X, Y, Zdef);
-                colormap('jet');
-                shading interp;
-                colorbar;
-                title(sprintf('第%d阶模态 (f = %.2f Hz)', mode, obj.Frequencies(mode)));
-                xlabel('X (m)');
-                ylabel('Y (m)');
-                zlabel('Z (m)');
-                axis equal;
-                view(45, 30);
-                
-                % Top view
-                subplot(2,2,3);
-                contourf(X, Y, w, 20);
-                colormap('jet');
-                colorbar;
-                title('俯视图');
-                xlabel('X (m)');
-                ylabel('Y (m)');
-                axis equal;
-                
-                % Side view
-                subplot(2,2,4);
-                plot(X(ceil(obj.Surface.ny/2),:), Zdef(ceil(obj.Surface.ny/2),:), ...
-                     'b-', 'LineWidth', 2);
-                hold on;
-                plot(X(ceil(obj.Surface.ny/2),:), Z(ceil(obj.Surface.ny/2),:), ...
-                     'k--', 'LineWidth', 1);
-                title('中心线变形');
-                xlabel('X (m)');
-                ylabel('Z (m)');
-                legend('变形', '原始形状');
-                axis equal;
-                grid on;
-                
-                % Save figure
-                saveas(gcf, fullfile(obj.OutputFolder, sprintf('Mode%d.png', mode)));
+            end
+        end
+        
+        function mac = calculateMAC(obj, num_modes)
+            % Calculate Modal Assurance Criterion (MAC) matrix
+            % num_modes: Number of modes to include in MAC calculation
+            
+            mac = zeros(num_modes);
+            for i = 1:num_modes
+                for j = 1:num_modes
+                    % Get mode shapes
+                    phi_i = obj.modes(:,i);
+                    phi_j = obj.modes(:,j);
+                    
+                    % Calculate MAC value
+                    mac(i,j) = abs(phi_i' * phi_j)^2 / ...
+                              ((phi_i' * phi_i) * (phi_j' * phi_j));
+                end
+            end
+        end
+        
+        function plotMode(obj, mode_num)
+            % Plot mode shape
+            if nargin < 2
+                mode_num = 1;
             end
             
-            % Calculate and plot frequency response function
-            fprintf('计算频率响应函数...\n');
-            f = logspace(0, 4, 1000);
-            w = 2*pi*f;
-            H = zeros(length(f), 1);
+            % Get mesh dimensions
+            [ny, nx] = size(obj.mesh.X);
+            ndof = 3;
             
-            % Select observation point (panel center)
-            obs_node = ceil(obj.Surface.nx*obj.Surface.ny/2);
-            obs_dof = (obs_node-1)*obj.DOFsPerNode + 3;
+            % Extract mode shape
+            mode = reshape(obj.modes(:,mode_num), ndof, []);
+            w = reshape(mode(3,:), ny, nx);
             
-            % Calculate FRF
-            for i = 1:length(f)
-                Z = -w(i)^2*obj.MassMatrix + 1i*w(i)*obj.DampingMatrix + obj.StiffnessMatrix;
-                F = zeros(size(Z,1), 1);
-                F(obs_dof) = 1;
-                U = Z\F;
-                H(i) = abs(U(obs_dof));
+            % Plot
+            surf(obj.mesh.X, obj.mesh.Y, obj.mesh.Z + w*0.1*max(abs(obj.mesh.Z(:))));
+            shading interp;
+            colormap('jet');
+            axis equal;
+            view(45, 30);
+            xlabel('X');
+            ylabel('Y');
+            zlabel('Z');
+        end
+        
+        function [Me, Ke] = elementMatrices(obj, xe, ye, ze, E, nu, rho, t)
+            % Calculate element matrices using simplified shell theory
+            
+            % Element size
+            dx = diff(xe([1,2]));
+            dy = diff(ye([1,4]));
+            
+            % Material matrix (plane stress)
+            c = E/(1-nu^2);
+            D = zeros(3,3);
+            D(1:2,1:2) = c * [1, nu; nu, 1];
+            D(3,3) = c * (1-nu)/2;  % Shear modulus
+            
+            % Shape functions at Gauss points
+            xi = [-1/sqrt(3), 1/sqrt(3)];
+            eta = [-1/sqrt(3), 1/sqrt(3)];
+            w = [1, 1];  % Gauss weights
+            
+            % Initialize element matrices
+            Me = zeros(12,12);
+            Ke = zeros(12,12);
+            
+            % Node indices for shape functions
+            xi_nodes = [-1, 1, 1, -1];
+            eta_nodes = [-1, -1, 1, 1];
+            
+            % Gauss integration
+            for i = 1:2
+                for j = 1:2
+                    % Shape function derivatives
+                    dN = zeros(2,4);
+                    dN(1,:) = [-(1-eta(j)), (1-eta(j)), (1+eta(j)), -(1+eta(j))]/4;
+                    dN(2,:) = [-(1-xi(i)), -(1+xi(i)), (1+xi(i)), (1-xi(i))]/4;
+                    
+                    % Jacobian
+                    J = zeros(2,2);
+                    for k = 1:4
+                        J = J + [dN(1,k)*xe(k), dN(1,k)*ye(k);
+                                dN(2,k)*xe(k), dN(2,k)*ye(k)];
+                    end
+                    detJ = det(J);
+                    invJ = inv(J);
+                    
+                    % B matrix
+                    B = zeros(3,12);
+                    for k = 1:4
+                        % Transform derivatives to global coordinates
+                        dNdx = invJ(1,1)*dN(1,k) + invJ(1,2)*dN(2,k);
+                        dNdy = invJ(2,1)*dN(1,k) + invJ(2,2)*dN(2,k);
+                        
+                        % Fill B matrix
+                        idx = (k-1)*3 + (1:3);
+                        B(:,idx) = [dNdx,    0,  0;
+                                  0,    dNdy,  0;
+                                  dNdy,  dNdx,  0];
+                    end
+                    
+                    % Shape functions for mass matrix
+                    N = zeros(3,12);
+                    for k = 1:4
+                        N_k = (1 + xi(i)*xi_nodes(k))*(1 + eta(j)*eta_nodes(k))/4;
+                        idx = (k-1)*3 + (1:3);
+                        N(:,idx) = eye(3)*N_k;
+                    end
+                    
+                    % Mass matrix contribution
+                    Me = Me + rho*t*N'*N*detJ*w(i)*w(j);
+                    
+                    % Stiffness matrix contribution
+                    Ke = Ke + t*B'*D*B*detJ*w(i)*w(j);
+                end
             end
             
-            % Plot FRF
-            figure('Position', [100 100 800 400]);
-            semilogx(f, 20*log10(H), 'LineWidth', 2);
-            grid on;
-            title('频率响应函数');
-            xlabel('频率 (Hz)');
-            ylabel('幅值 (dB)');
-            saveas(gcf, fullfile(obj.OutputFolder, 'FRF.png'));
+            % Add bending stiffness
+            D_bend = E*t^3/(12*(1-nu^2)) * [1 nu 0; nu 1 0; 0 0 (1-nu)/2];
+            for k = 1:4
+                idx = (k-1)*3 + 3;  % w-DOF
+                Ke(idx,idx) = Ke(idx,idx) + D_bend(1,1);
+            end
+            
+            % Add small regularization term to improve numerical stability
+            eps = 1e-10;
+            Ke = Ke + eps*eye(size(Ke));
         end
     end
 end

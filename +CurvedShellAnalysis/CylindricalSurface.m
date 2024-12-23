@@ -1,54 +1,57 @@
 classdef CylindricalSurface < CurvedShellAnalysis.Surface
-    % CYLINDRICALSURFACE Class for cylindrical shell analysis
+    % CylindricalSurface Class for cylindrical shell analysis
     
     properties
-        R  % Radius of curvature (m)
-        Angle = pi/2  % Angular span (radians)
-        Direction = 'x'  % Cylinder axis direction ('x' or 'y')
+        R       % Radius
+        zeta    % Damping ratio
     end
     
     methods
         function obj = CylindricalSurface(params)
-            % Constructor for CylindricalSurface
-            % params: struct with fields from Surface plus:
-            %   R: radius
-            %   Angle: angular span (optional, default: pi/2)
-            %   Direction: axis direction (optional, default: 'x')
-            
+            % Constructor
             obj = obj@CurvedShellAnalysis.Surface(params);
-            obj.R = params.R;
-            if isfield(params, 'Angle')
-                obj.Angle = params.Angle;
+            
+            % Set cylindrical specific parameters
+            if isfield(params, 'R')
+                obj.R = params.R;
+            else
+                error('Radius (R) must be specified for cylindrical surface');
             end
-            if isfield(params, 'Direction')
-                obj.Direction = params.Direction;
+            
+            if isfield(params, 'zeta')
+                obj.zeta = params.zeta;
+            else
+                obj.zeta = 0.02;  % Default damping ratio
             end
+            
+            % Validate and create mesh
             obj.validateParams();
+            obj.createMesh();
         end
         
-        function [X, Y, Z] = generateMesh(obj)
-            % Generate cylindrical surface mesh
-            if strcmpi(obj.Direction, 'x')
-                [X, theta] = meshgrid(linspace(-obj.L/2, obj.L/2, obj.nx), ...
-                                    linspace(-obj.Angle/2, obj.Angle/2, obj.ny));
-                Y = obj.R * sin(theta);
-                Z = obj.R * (1 - cos(theta));
-            else  % y-direction
-                [theta, Y] = meshgrid(linspace(-obj.Angle/2, obj.Angle/2, obj.nx), ...
-                                    linspace(-obj.W/2, obj.W/2, obj.ny));
-                X = obj.R * sin(theta);
-                Z = obj.R * (1 - cos(theta));
-            end
+        function createMesh(obj)
+            % Create mesh for cylindrical surface
+            [x, y] = meshgrid(linspace(0, obj.L, obj.nx), ...
+                            linspace(-obj.W/2, obj.W/2, obj.ny));
+            
+            % Calculate z coordinates for cylindrical surface
+            theta = y / obj.R;  % Angular position
+            z = obj.R * (1 - cos(theta));
+            
+            % Store mesh data
+            obj.mesh = struct('X', x, 'Y', y, 'Z', z);
         end
         
         function validateParams(obj)
             % Validate parameters specific to cylindrical surface
+            if ~isempty(obj.R)
+                assert(obj.R > 0, 'Radius must be positive');
+            end
+            if ~isempty(obj.zeta)
+                assert(obj.zeta >= 0 && obj.zeta < 1, ...
+                      'Damping ratio must be between 0 and 1');
+            end
             validateParams@CurvedShellAnalysis.Surface(obj);
-            assert(obj.R > 0, 'Radius must be positive');
-            assert(obj.Angle > 0 && obj.Angle <= 2*pi, ...
-                  'Angle must be between 0 and 2π');
-            assert(ismember(lower(obj.Direction), {'x','y'}), ...
-                  'Direction must be ''x'' or ''y''');
         end
     end
 end

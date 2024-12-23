@@ -5,6 +5,14 @@
 % 清理工作空间
 clear; clc; close all;
 
+% 创建结果文件夹
+if ~exist('results', 'dir')
+    mkdir('results');
+end
+if ~exist('../docs/images', 'dir')
+    mkdir('../docs/images');
+end
+
 %% 定义几何参数
 % 长度 (m)
 L = 0.4;    
@@ -199,14 +207,8 @@ alpha = 2*zeta*sqrt(frequencies(1)*frequencies(6));  % 质量比例系数
 beta = 2*zeta/(sqrt(frequencies(1)*frequencies(6))); % 刚度比例系数
 C = alpha*M + beta*K;
 
-%% 创建结果文件夹
-outputFolder = 'ModalResults';
-if ~exist(outputFolder, 'dir')
-    mkdir(outputFolder);
-end
-
 %% 保存频率结果
-fid = fopen(fullfile(outputFolder, 'NaturalFrequencies.txt'), 'w');
+fid = fopen(fullfile('results', 'NaturalFrequencies.txt'), 'w');
 fprintf(fid, '曲面板模态分析结果\n\n');
 fprintf(fid, '几何参数:\n');
 fprintf(fid, '长度: %.3f m\n', L);
@@ -229,15 +231,15 @@ fclose(fid);
 
 %% 绘制模态振型
 fprintf('绘制模态振型...\n');
-for mode = 1:6
-    figure('Position', [100 100 800 600]);
-    
+figure('Name', 'Modal Analysis', 'Position', [100 100 1200 800]);
+for i = 1:6
+    subplot(2,3,i);
     % 提取位移分量
     w = zeros(ny, nx);
-    for i = 1:nx
-        for j = 1:ny
-            n = j + (i-1)*ny;
-            w(j,i) = modes((n-1)*ndof+3, mode);  % 取出z方向位移
+    for j = 1:nx
+        for k = 1:ny
+            n = k + (j-1)*ny;
+            w(k,j) = modes((n-1)*ndof+3, i);  % 取出z方向位移
         end
     end
     
@@ -248,43 +250,19 @@ for mode = 1:6
     Zdef = Z + w*0.1*max(abs(Z(:)));  % 放大变形以便观察
     
     % 绘制3D曲面
-    subplot(2,2,[1,2]);
     surf(X, Y, Zdef);
     colormap('jet');
     shading interp;
     colorbar;
-    title(sprintf('第%d阶模态 (f = %.2f Hz)', mode, frequencies(mode)));
+    title(sprintf('Mode %d: %.2f Hz', i, frequencies(i)));
     xlabel('X (m)');
     ylabel('Y (m)');
     zlabel('Z (m)');
     axis equal;
     view(45, 30);
-    
-    % 绘制俯视图
-    subplot(2,2,3);
-    contourf(X, Y, w, 20);
-    colormap('jet');
-    colorbar;
-    title('俯视图');
-    xlabel('X (m)');
-    ylabel('Y (m)');
-    axis equal;
-    
-    % 绘制侧视图
-    subplot(2,2,4);
-    plot(X(ceil(ny/2),:), Zdef(ceil(ny/2),:), 'b-', 'LineWidth', 2);
-    hold on;
-    plot(X(ceil(ny/2),:), Z(ceil(ny/2),:), 'k--', 'LineWidth', 1);
-    title('中心线变形');
-    xlabel('X (m)');
-    ylabel('Z (m)');
-    legend('变形', '原始形状');
-    axis equal;
-    grid on;
-    
-    % 保存图像
-    saveas(gcf, fullfile(outputFolder, sprintf('Mode%d.png', mode)));
 end
+saveas(gcf, fullfile('results', 'ModalAnalysis.png'));
+saveas(gcf, fullfile('../docs/images', 'ModalAnalysis.png'));
 
 %% 绘制频率响应函数
 fprintf('计算频率响应函数...\n');
@@ -307,35 +285,29 @@ for i = 1:length(f)
 end
 
 % 绘制FRF
-figure('Position', [100 100 800 400]);
+figure('Name', 'Frequency Response', 'Position', [100 100 800 600]);
 semilogx(f, 20*log10(H), 'LineWidth', 2);
 grid on;
-title('频率响应函数');
-xlabel('频率 (Hz)');
-ylabel('幅值 (dB)');
-saveas(gcf, fullfile(outputFolder, 'FRF.png'));
+xlabel('Frequency (Hz)');
+ylabel('Amplitude (dB)');
+title('Frequency Response Function');
+saveas(gcf, fullfile('results', 'FrequencyResponse.png'));
+saveas(gcf, fullfile('../docs/images', 'FrequencyResponse.png'));
 
-%% 保存结果
-if ~exist('results', 'dir')
-    mkdir('results');
-end
-
-% 保存所有图像到PNG文件
+%% 保存所有图像
 figHandles = findall(0, 'Type', 'figure');
 for i = 1:length(figHandles)
     fig = figHandles(i);
-    figName = fig.Name;
-    % 转换空格为下划线并删除特殊字符
-    figName = lower(regexprep(figName, '\s+', '_'));
-    figName = regexprep(figName, '[^a-z0-9_]', '');
-    saveas(fig, fullfile('results', [figName '.png']));
+    figName = get(fig, 'Name');
+    if ~isempty(figName)
+        % 转换空格为下划线并删除特殊字符
+        figName = lower(regexprep(figName, '\s+', '_'));
+        figName = regexprep(figName, '[^a-z0-9_]', '');
+        
+        % 保存到results和docs/images
+        print(fig, fullfile('results', figName), '-dpng', '-r300');
+        print(fig, fullfile('../docs/images', figName), '-dpng', '-r300');
+    end
 end
 
-% 复制结果到文档
-if ~exist('docs/images', 'dir')
-    mkdir('docs/images');
-end
-copyfile('results/*.png', 'docs/images/');
-
-fprintf('\n分析完成！结果已保存到 %s\n', outputFolder);
-fprintf('图像已复制到 docs/images/ 目录\n');
+fprintf('\n分析完成！结果已保存到 results/ 和 docs/images/ 目录\n');

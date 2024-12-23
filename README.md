@@ -2,17 +2,32 @@
 
 A comprehensive MATLAB package for modal analysis of curved surfaces, including spherical, ellipsoidal, cylindrical, and conical surfaces. The package supports advanced features such as multi-scale analysis, fluid-structure interaction, topology optimization, and progressive failure analysis.
 
+## Results Gallery
+
+### Modal Analysis
+![Modal Analysis](docs/images/modal_analysis.png)
+
+### Frequency Response Analysis
+![Frequency Response](docs/images/frequency_response.png)
+
+### Individual Mode Shapes
+| Mode 1 (89.67 Hz) | Mode 2 (89.67 Hz) | Mode 3 (89.72 Hz) |
+|-------------------|-------------------|-------------------|
+| ![Mode 1](docs/images/mode_1_89667_hz.png) | ![Mode 2](docs/images/mode_2_89667_hz.png) | ![Mode 3](docs/images/mode_3_89720_hz.png) |
+
+| Mode 4 (89.72 Hz) | Mode 5 (89.81 Hz) | Mode 6 (89.81 Hz) |
+|-------------------|-------------------|-------------------|
+| ![Mode 4](docs/images/mode_4_89723_hz.png) | ![Mode 5](docs/images/mode_5_89807_hz.png) | ![Mode 6](docs/images/mode_6_89813_hz.png) |
+
 ## Features
 
 ### Modal Analysis
-
 - Natural frequencies and mode shapes computation
 - Mass normalization and orthogonality checks
 - Frequency response analysis
 - Random vibration analysis
 
 ### Surface Types
-
 - Spherical shells
 - Ellipsoidal shells
 - Cylindrical shells
@@ -20,7 +35,6 @@ A comprehensive MATLAB package for modal analysis of curved surfaces, including 
 - Custom parametric surfaces
 
 ### Analysis Types
-
 - Modal analysis
 - Dynamic response
 - Thermal-structural coupling
@@ -28,44 +42,14 @@ A comprehensive MATLAB package for modal analysis of curved surfaces, including 
 - Fluid-structure interaction
 - Topology optimization
 
-## Results Gallery
-
-### Modal Analysis Results
-
-#### Spherical Shell
-
-| Mode 1 | Mode 2 | Mode 3 | Mode 4 |
-|--------|--------|--------|--------|
-| ![Mode 1](docs/images/spherical_mode1.png) | ![Mode 2](docs/images/spherical_mode2.png) | ![Mode 3](docs/images/spherical_mode3.png) | ![Mode 4](docs/images/spherical_mode4.png) |
-
-#### Cylindrical Shell
-
-| Mode 1 | Mode 2 | Mode 3 | Mode 4 |
-|--------|--------|--------|--------|
-| ![Mode 1](docs/images/cylindrical_mode1.png) | ![Mode 2](docs/images/cylindrical_mode2.png) | ![Mode 3](docs/images/cylindrical_mode3.png) | ![Mode 4](docs/images/cylindrical_mode4.png) |
-
-### Fluid-Structure Interaction
-
-| Pressure Field | Deformation |
-|----------------|-------------|
-| ![Pressure](docs/images/fsi_pressure.png) | ![Deformation](docs/images/fsi_deformation.png) |
-
-### Topology Optimization
-
-| Initial Design | Optimized Design | Convergence |
-|----------------|------------------|-------------|
-| ![Initial](docs/images/topo_initial.png) | ![Final](docs/images/topo_final.png) | ![Convergence](docs/images/topo_convergence.png) |
-
 ## Installation
 
 1. Clone the repository:
-
 ```bash
 git clone https://github.com/gxingqiang/modal-analysis.git
 ```
 
 2. Add the package to your MATLAB path:
-
 ```matlab
 addpath('/path/to/modal-analysis');
 ```
@@ -148,6 +132,5 @@ If you use this package in your research, please cite:
 ## Contact
 
 For questions and feedback:
-
-- Email: <gxingqiang@gmail.com>
+- Email: chen.xingqiang@iechor.com
 - GitHub Issues: [https://github.com/gxingqiang/modal-analysis/issues](https://github.com/gxingqiang/modal-analysis/issues)

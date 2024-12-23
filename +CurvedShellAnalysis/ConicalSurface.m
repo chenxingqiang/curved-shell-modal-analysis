@@ -25,28 +25,35 @@ classdef ConicalSurface < CurvedShellAnalysis.Surface
                 obj.Alpha = atan2(obj.R1 - obj.R2, obj.L);
             end
             obj.validateParams();
+            obj.createMesh();
         end
         
-        function [X, Y, Z] = generateMesh(obj)
-            % Generate conical surface mesh
+        function createMesh(obj)
+            % Create conical surface mesh
             [theta, h] = meshgrid(linspace(0, 2*pi, obj.nx), ...
                                 linspace(0, obj.L, obj.ny));
             
             % Radius varies linearly with height
             r = obj.R1 - (obj.R1 - obj.R2) * h/obj.L;
             
-            X = r .* cos(theta);
-            Y = r .* sin(theta);
-            Z = h;
+            % Store mesh data
+            obj.mesh = struct();
+            obj.mesh.X = r .* cos(theta);
+            obj.mesh.Y = r .* sin(theta);
+            obj.mesh.Z = h;
         end
         
         function validateParams(obj)
             % Validate parameters specific to conical surface
+            if ~isempty(obj.R1) && ~isempty(obj.R2)
+                assert(obj.R1 > 0 && obj.R2 >= 0, 'Radii must be non-negative');
+                assert(obj.R1 >= obj.R2, 'Bottom radius must be larger than top radius');
+            end
+            if ~isempty(obj.Alpha)
+                assert(obj.Alpha > 0 && obj.Alpha < pi/2, ...
+                      'Cone angle must be between 0 and π/2');
+            end
             validateParams@CurvedShellAnalysis.Surface(obj);
-            assert(obj.R1 > 0 && obj.R2 >= 0, 'Radii must be non-negative');
-            assert(obj.R1 >= obj.R2, 'Bottom radius must be larger than top radius');
-            assert(obj.Alpha > 0 && obj.Alpha < pi/2, ...
-                  'Cone angle must be between 0 and π/2');
         end
     end
 end
