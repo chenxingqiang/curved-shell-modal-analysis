@@ -1,6 +1,7 @@
 # User Guide
 
 ## Table of Contents
+
 1. [Getting Started](#getting-started)
 2. [Basic Analysis](#basic-analysis)
 3. [Advanced Features](#advanced-features)
@@ -10,12 +11,14 @@
 ## Getting Started
 
 ### Installation
+
 1. System Requirements:
    - MATLAB R2020b or later
    - Parallel Computing Toolbox (optional)
    - Optimization Toolbox (optional)
 
 2. Installation Steps:
+
    ```matlab
    % Add package to MATLAB path
    addpath(genpath('path/to/CurvedShellAnalysis'));
@@ -25,6 +28,7 @@
    ```
 
 ### Basic Configuration
+
 ```matlab
 % Set default parameters
 params = struct();
@@ -41,6 +45,7 @@ end
 ## Basic Analysis
 
 ### Modal Analysis Tutorial
+
 ```matlab
 % 1. Define geometry parameters
 params = struct();
@@ -68,6 +73,7 @@ modal.plotMode(1);  % Plot first mode
 ```
 
 ### Static Analysis Tutorial
+
 ```matlab
 % 1. Create surface (as above)
 sphere = CurvedShellAnalysis.SphericalSurface(params);
@@ -88,6 +94,7 @@ static.plotStress('vonMises');
 ```
 
 ### Thermal Analysis Tutorial
+
 ```matlab
 % 1. Define thermal properties
 params.alpha = 1.2e-5;  % Thermal expansion
@@ -112,6 +119,7 @@ thermal.plotThermalStress();
 ## Advanced Features
 
 ### Composite Material Analysis
+
 ```matlab
 % 1. Define composite layup
 layup = struct();
@@ -139,6 +147,7 @@ composite.plotFailureIndices();
 ```
 
 ### Shape Optimization
+
 ```matlab
 % 1. Define optimization problem
 problem = struct();
@@ -159,6 +168,7 @@ opt.plotPareto();  % For multi-objective
 ```
 
 ### Parallel Computing
+
 ```matlab
 % 1. Initialize parallel manager
 pm = CurvedShellAnalysis.ParallelManager(4, 100, '4GB');
@@ -181,22 +191,26 @@ processResults(results);
 ## Tips and Best Practices
 
 ### Mesh Refinement
+
 1. Start with a coarse mesh for initial analysis
 2. Perform mesh convergence study
 3. Refine mesh in areas of interest
 4. Use adaptive meshing for efficiency
 
 ### Solver Selection
+
 - Direct solvers: Best for small to medium problems
 - Iterative solvers: Better for large problems
 - GPU acceleration: Beneficial for dense matrices
 
 ### Memory Management
+
 1. Clear large arrays when not needed
 2. Use sparse matrices when possible
 3. Implement out-of-core solutions for very large problems
 
 ### Result Validation
+
 1. Compare with analytical solutions when available
 2. Check energy balance
 3. Verify boundary condition effects
@@ -207,6 +221,7 @@ processResults(results);
 ### Common Issues and Solutions
 
 #### Convergence Problems
+
 ```matlab
 % 1. Adjust convergence parameters
 analysis.Options.tolerance = 1e-6;
@@ -220,6 +235,7 @@ analysis.Options.num_steps = 10;
 ```
 
 #### Memory Issues
+
 ```matlab
 % 1. Use sparse matrices
 analysis.Options.use_sparse = true;
@@ -232,6 +248,7 @@ analysis.Options.out_of_core = true;
 ```
 
 #### Numerical Instabilities
+
 ```matlab
 % 1. Add numerical damping
 analysis.Options.alpha = 0.1;

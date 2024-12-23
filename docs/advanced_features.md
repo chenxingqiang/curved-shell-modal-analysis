@@ -3,6 +3,7 @@
 ## High-Performance Computing
 
 ### GPU Acceleration
+
 ```matlab
 % Enable GPU computing
 gpu = CurvedShellAnalysis.GPUManager();
@@ -21,6 +22,7 @@ end
 ```
 
 ### Parallel Computing
+
 ```matlab
 % Initialize parallel pool
 if isempty(gcp('nocreate'))
@@ -41,6 +43,7 @@ end
 ```
 
 ### Out-of-Core Solution
+
 ```matlab
 % Large-scale analysis with disk storage
 solver = CurvedShellAnalysis.OutOfCoreSolver();
@@ -58,6 +61,7 @@ end
 ## Advanced Material Models
 
 ### Viscoelastic Material
+
 ```matlab
 % Prony series parameters
 prony = struct();
@@ -74,6 +78,7 @@ t = logspace(-2, 2, 100);
 ```
 
 ### Damage Evolution
+
 ```matlab
 % Damage model parameters
 damage = struct();
@@ -90,6 +95,7 @@ material = CurvedShellAnalysis.DamageMaterial(damage);
 ```
 
 ### Multi-Scale Analysis
+
 ```matlab
 % Microscale RVE
 rve = CurvedShellAnalysis.RVEAnalysis();
@@ -108,6 +114,7 @@ macro.setHomogenizedProperties(C_eff, thermal_eff);
 ## Advanced Numerical Methods
 
 ### Stabilization Techniques
+
 ```matlab
 % Hourglass control
 stabilization = struct();
@@ -121,6 +128,7 @@ element.setFormulation('enhanced_assumed_strain');
 ```
 
 ### Error Estimation
+
 ```matlab
 % A posteriori error estimation
 estimator = CurvedShellAnalysis.ErrorEstimator();
@@ -135,6 +143,7 @@ mesh.refine(indicators);
 ```
 
 ### Advanced Time Integration
+
 ```matlab
 % Generalized-α method
 integrator = CurvedShellAnalysis.TimeIntegrator('generalized_alpha');
@@ -151,6 +160,7 @@ integrator.setAlpha(0.1);
 ## Advanced Optimization Methods
 
 ### Surrogate-Based Optimization
+
 ```matlab
 % Create surrogate model
 surrogate = CurvedShellAnalysis.SurrogateModel('kriging');
@@ -164,6 +174,7 @@ optimizer.setAcquisitionFunction('expected_improvement');
 ```
 
 ### Topology Optimization
+
 ```matlab
 % SIMP method
 topology = CurvedShellAnalysis.TopologyOptimization();
@@ -178,6 +189,7 @@ topology.setReinitialization(true);
 ```
 
 ### Multi-Fidelity Optimization
+
 ```matlab
 % Define fidelity levels
 low_fi = CurvedShellAnalysis.ModelEvaluator('coarse');
@@ -193,6 +205,7 @@ opt.setStrategy('trust_region');
 ## Advanced Post-Processing
 
 ### Modal Correlation
+
 ```matlab
 % MAC analysis
 mac = CurvedShellAnalysis.ModalCorrelation();
@@ -207,6 +220,7 @@ tracker.trackModes(freq_history, mode_history);
 ```
 
 ### Advanced Visualization
+
 ```matlab
 % Custom visualization
 viewer = CurvedShellAnalysis.ResultViewer();
@@ -223,6 +237,7 @@ animator.createAnimation('response.gif');
 ```
 
 ### Result Export
+
 ```matlab
 % Export to various formats
 exporter = CurvedShellAnalysis.ResultExporter();

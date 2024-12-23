@@ -1,5 +1,7 @@
 classdef ModalAnalysis < handle
     % ModalAnalysis Class for modal analysis of curved shells
+    %   This class performs modal analysis on curved shells, including
+    %   composite shells with multiple layers
     
     properties
         Surface         % Surface object
@@ -7,6 +9,7 @@ classdef ModalAnalysis < handle
         frequencies     % Natural frequencies
         modes          % Mode shapes
         mesh           % Mesh data
+        damping_ratio  % Modal damping ratio
     end
     
     methods
@@ -14,6 +17,11 @@ classdef ModalAnalysis < handle
             % Constructor for ModalAnalysis
             obj.Surface = surface;
             obj.NumModes = num_modes;
+            if isprop(surface, 'zeta')
+                obj.damping_ratio = surface.zeta;
+            else
+                obj.damping_ratio = 0.02;  % Default damping ratio
+            end
         end
         
         function analyze(obj)
@@ -23,15 +31,9 @@ classdef ModalAnalysis < handle
             % Get mesh from surface
             obj.mesh = obj.Surface.getMesh();
             
-            % Get material properties
-            E = obj.Surface.E;
-            nu = obj.Surface.nu;
-            rho = obj.Surface.rho;
-            t = obj.Surface.t;
-            
             % Get mesh dimensions
             [ny, nx] = size(obj.mesh.X);
-            ndof = 3;  % 3 DOF per node (u, v, w)
+            ndof = 6;  % 6 DOF per node for shell elements
             
             % Initialize matrices
             n = nx * ny * ndof;
@@ -51,7 +53,13 @@ classdef ModalAnalysis < handle
                     ze = obj.mesh.Z(nodes([1,2,3,4]));
                     
                     % Element matrices
-                    [Me, Ke] = obj.elementMatrices(xe, ye, ze, E, nu, rho, t);
+                    if isa(obj.Surface, 'CurvedShellAnalysis.CompositeShell')
+                        [Me, Ke] = obj.Surface.getElementMatrices(xe, ye, ze);
+                    else
+                        % For non-composite shells, use standard element matrices
+                        [Me, Ke] = obj.elementMatrices(xe, ye, ze, ...
+                            obj.Surface.E, obj.Surface.nu, obj.Surface.rho, obj.Surface.t);
+                    end
                     
                     % Global DOFs
                     dofs = [];
@@ -67,32 +75,100 @@ classdef ModalAnalysis < handle
             
             % Apply boundary conditions
             fprintf('应用边界条件...\n');
-            % Fix edges
-            fixed_nodes = [1:ny, ny*(nx-1)+1:ny*nx];  % First and last rows
+            
+            % Fix all edges
+            fixed_nodes = unique([
+                1:ny,                    % Bottom edge
+                1:ny:ny*(nx-1)+1,       % Left edge
+                ny:ny:ny*nx,            % Right edge
+                ny*(nx-1)+1:ny*nx       % Top edge
+            ]);
+            
+            % Initialize fixed DOFs array
             fixed_dofs = [];
+            
+            % For each fixed node, constrain all DOFs
             for node = fixed_nodes
-                fixed_dofs = [fixed_dofs, (node-1)*ndof+1:node*ndof];
+                fixed_dofs = [fixed_dofs, (node-1)*ndof + (1:ndof)];
             end
+            
+            % Get free DOFs
             free_dofs = setdiff(1:n, fixed_dofs);
             
-            % Solve eigenvalue problem
-            fprintf('求解特征值问题...\n');
-            
-            % Add small stiffness to prevent singularity
-            K = K + sparse(1:n, 1:n, 1e-6*max(diag(K)), n, n);
-            
-            % Solve reduced system
+            % Extract free DOF matrices
             Kr = K(free_dofs,free_dofs);
             Mr = M(free_dofs,free_dofs);
             
-            % Use shift-invert mode for better numerical stability
-            sigma = 1e-6;  % Small shift
-            [V, D] = eigs(Kr, Mr, obj.NumModes, sigma);
+            % Add small regularization
+            eps = 1e-10;
+            Kr = Kr + eps*speye(size(Kr));
+            Mr = Mr + eps*speye(size(Mr));
             
-            % Store results
-            obj.frequencies = sqrt(diag(D))/(2*pi);
-            obj.modes = zeros(n, obj.NumModes);
+            % Scale matrices for better conditioning
+            scale = max(abs([Mr(:); Kr(:)]));
+            if scale > 0
+                Mr = Mr/scale;
+                Kr = Kr/scale;
+            end
+            
+            % Solve generalized eigenvalue problem using eigs
+            opts.disp = 0;
+            opts.isreal = true;
+            opts.tol = 1e-6;
+            opts.maxit = 1000;
+            
+            try
+                % Try shift-invert mode first
+                sigma = 1e-6;  % Small shift
+                [V, D] = eigs(Kr, Mr, min(obj.NumModes*2, size(Kr,1)), sigma, opts);
+            catch
+                warning('Shift-invert mode failed, trying regular mode...');
+                try
+                    [V, D] = eigs(Kr, Mr, min(obj.NumModes*2, size(Kr,1)), 'sm', opts);
+                catch
+                    warning('eigs failed, trying full eigenvalue decomposition...');
+                    [V, D] = eig(full(Kr), full(Mr));
+                end
+            end
+            
+            % Extract eigenvalues and sort
+            [lambda, idx] = sort(real(diag(D)), 'ascend');
+            
+            % Remove negative or complex eigenvalues
+            valid = find(lambda > 0 & abs(imag(lambda)./real(lambda)) < 1e-6);
+            if isempty(valid)
+                error('No valid eigenvalues found. Check model parameters.');
+            end
+            
+            lambda = lambda(valid);
+            V = V(:,idx(valid));
+            
+            % Limit to requested number of modes
+            n_modes = min(obj.NumModes, length(lambda));
+            lambda = lambda(1:n_modes);
+            V = V(:,1:n_modes);
+            
+            % Update number of modes
+            obj.NumModes = n_modes;
+            
+            % Convert eigenvalues to frequencies (Hz)
+            obj.frequencies = sqrt(abs(lambda))/(2*pi)*sqrt(scale);
+            
+            % Store mode shapes
+            obj.modes = zeros(n, n_modes);
             obj.modes(free_dofs,:) = V;
+            
+            % Normalize mode shapes
+            for i = 1:n_modes
+                % Mass normalization
+                norm_factor = sqrt(obj.modes(:,i)'*M*obj.modes(:,i));
+                if norm_factor > 0
+                    obj.modes(:,i) = obj.modes(:,i)/norm_factor;
+                end
+            end
+            
+            fprintf('找到 %d 个模态，频率范围: %.1f - %.1f Hz\n', ...
+                   n_modes, full(min(obj.frequencies)), full(max(obj.frequencies)));
         end
         
         function response = calculateTransientResponse(obj, F, t)
@@ -100,28 +176,63 @@ classdef ModalAnalysis < handle
             % F: Force history vector
             % t: Time vector
             
-            % Default damping ratio
-            zeta = 0.02;
+            % Modal transformation
+            modal_force = obj.modes' * F;
+            omega = 2*pi*obj.frequencies;
             
             % Initialize response
             response = zeros(size(t));
             
-            % Modal participation factors
+            % Calculate response for each mode
             for i = 1:obj.NumModes
-                % Natural frequency in rad/s
-                wn = 2*pi*obj.frequencies(i);
+                % Modal parameters
+                wn = omega(i);
+                zeta = obj.damping_ratio;
+                wd = wn*sqrt(1-zeta^2);  % Damped natural frequency
                 
-                % Damped natural frequency
-                wd = wn*sqrt(1-zeta^2);
-                
-                % Modal response using convolution integral
-                h = exp(-zeta*wn*t).*sin(wd*t)./(wd);  % Impulse response
-                y = conv(F, h);  % Convolution
-                y = y(1:length(t))*mean(diff(t));  % Truncate and scale
-                
-                % Add modal contribution
-                response = response + y;
+                % Modal response
+                h = exp(-zeta*wn*t).*(cos(wd*t) + zeta*wn/wd*sin(wd*t));
+                response = response + modal_force(i)*h;
             end
+        end
+        
+        function plotMode(obj, mode_num)
+            % Plot mode shape
+            if mode_num > obj.NumModes
+                error('Mode number exceeds available modes');
+            end
+            
+            % Get mesh dimensions
+            [ny, nx] = size(obj.mesh.X);
+            n_nodes = nx * ny;
+            ndof = size(obj.modes,1)/n_nodes;
+            
+            % Extract displacement components
+            mode = obj.modes(:,mode_num);
+            
+            % Reshape mode to get out-of-plane displacement
+            w = zeros(ny, nx);
+            for i = 1:nx
+                for j = 1:ny
+                    node = j + (i-1)*ny;
+                    w(j,i) = mode((node-1)*ndof + 3);  % w displacement is 3rd DOF
+                end
+            end
+            
+            % Create deformed surface
+            Z = obj.mesh.Z + real(w);
+            
+            % Plot
+            surf(obj.mesh.X, obj.mesh.Y, Z);
+            axis equal;
+            xlabel('X');
+            ylabel('Y');
+            zlabel('Z');
+            colormap('jet');
+            shading interp;
+            
+            % Add frequency to title
+            title(sprintf('Mode %d: %.1f Hz', mode_num, full(obj.frequencies(mode_num))));
         end
         
         function energy = calculateModalEnergy(obj, mode_num)
@@ -130,17 +241,15 @@ classdef ModalAnalysis < handle
             
             % Get mesh dimensions
             [ny, nx] = size(obj.mesh.X);
-            ndof = 3;  % 3 DOF per node (u, v, w)
-            
-            % Get material properties
-            E = obj.Surface.E;
-            nu = obj.Surface.nu;
-            t = obj.Surface.t;
+            ndof = size(obj.modes,1)/(nx*ny);
             
             % Initialize energy field
             energy = zeros(ny, nx);
             
-            % Calculate strain energy at each element
+            % Get mode shape
+            mode = obj.modes(:,mode_num);
+            
+            % Calculate energy for each element
             for i = 1:nx-1
                 for j = 1:ny-1
                     % Element nodes
@@ -151,149 +260,30 @@ classdef ModalAnalysis < handle
                     ye = obj.mesh.Y(nodes([1,2,3,4]));
                     ze = obj.mesh.Z(nodes([1,2,3,4]));
                     
-                    % Element displacements
+                    % Element DOFs
                     dofs = [];
                     for node = nodes
                         dofs = [dofs, (node-1)*ndof+1:node*ndof];
                     end
-                    u_e = obj.modes(dofs,mode_num);
                     
-                    % Calculate element strain energy
-                    [~, Ke] = obj.elementMatrices(xe, ye, ze, E, nu, 1, t);  % Use unit density
-                    e = 0.5 * u_e' * Ke * u_e;
+                    % Element mode shape
+                    q = mode(dofs);
+                    
+                    % Element matrices
+                    if isa(obj.Surface, 'CurvedShellAnalysis.CompositeShell')
+                        [~, Ke] = obj.Surface.getElementMatrices(xe, ye, ze);
+                    else
+                        [~, Ke] = obj.elementMatrices(xe, ye, ze, ...
+                            obj.Surface.E, obj.Surface.nu, obj.Surface.rho, obj.Surface.t);
+                    end
+                    
+                    % Element strain energy
+                    e = 0.5 * q' * Ke * q;
                     
                     % Distribute energy to nodes
-                    energy(nodes) = energy(nodes) + e/4;  % Average to nodes
+                    energy(nodes) = energy(nodes) + e/4;
                 end
             end
-        end
-        
-        function mac = calculateMAC(obj, num_modes)
-            % Calculate Modal Assurance Criterion (MAC) matrix
-            % num_modes: Number of modes to include in MAC calculation
-            
-            mac = zeros(num_modes);
-            for i = 1:num_modes
-                for j = 1:num_modes
-                    % Get mode shapes
-                    phi_i = obj.modes(:,i);
-                    phi_j = obj.modes(:,j);
-                    
-                    % Calculate MAC value
-                    mac(i,j) = abs(phi_i' * phi_j)^2 / ...
-                              ((phi_i' * phi_i) * (phi_j' * phi_j));
-                end
-            end
-        end
-        
-        function plotMode(obj, mode_num)
-            % Plot mode shape
-            if nargin < 2
-                mode_num = 1;
-            end
-            
-            % Get mesh dimensions
-            [ny, nx] = size(obj.mesh.X);
-            ndof = 3;
-            
-            % Extract mode shape
-            mode = reshape(obj.modes(:,mode_num), ndof, []);
-            w = reshape(mode(3,:), ny, nx);
-            
-            % Plot
-            surf(obj.mesh.X, obj.mesh.Y, obj.mesh.Z + w*0.1*max(abs(obj.mesh.Z(:))));
-            shading interp;
-            colormap('jet');
-            axis equal;
-            view(45, 30);
-            xlabel('X');
-            ylabel('Y');
-            zlabel('Z');
-        end
-        
-        function [Me, Ke] = elementMatrices(obj, xe, ye, ze, E, nu, rho, t)
-            % Calculate element matrices using simplified shell theory
-            
-            % Element size
-            dx = diff(xe([1,2]));
-            dy = diff(ye([1,4]));
-            
-            % Material matrix (plane stress)
-            c = E/(1-nu^2);
-            D = zeros(3,3);
-            D(1:2,1:2) = c * [1, nu; nu, 1];
-            D(3,3) = c * (1-nu)/2;  % Shear modulus
-            
-            % Shape functions at Gauss points
-            xi = [-1/sqrt(3), 1/sqrt(3)];
-            eta = [-1/sqrt(3), 1/sqrt(3)];
-            w = [1, 1];  % Gauss weights
-            
-            % Initialize element matrices
-            Me = zeros(12,12);
-            Ke = zeros(12,12);
-            
-            % Node indices for shape functions
-            xi_nodes = [-1, 1, 1, -1];
-            eta_nodes = [-1, -1, 1, 1];
-            
-            % Gauss integration
-            for i = 1:2
-                for j = 1:2
-                    % Shape function derivatives
-                    dN = zeros(2,4);
-                    dN(1,:) = [-(1-eta(j)), (1-eta(j)), (1+eta(j)), -(1+eta(j))]/4;
-                    dN(2,:) = [-(1-xi(i)), -(1+xi(i)), (1+xi(i)), (1-xi(i))]/4;
-                    
-                    % Jacobian
-                    J = zeros(2,2);
-                    for k = 1:4
-                        J = J + [dN(1,k)*xe(k), dN(1,k)*ye(k);
-                                dN(2,k)*xe(k), dN(2,k)*ye(k)];
-                    end
-                    detJ = det(J);
-                    invJ = inv(J);
-                    
-                    % B matrix
-                    B = zeros(3,12);
-                    for k = 1:4
-                        % Transform derivatives to global coordinates
-                        dNdx = invJ(1,1)*dN(1,k) + invJ(1,2)*dN(2,k);
-                        dNdy = invJ(2,1)*dN(1,k) + invJ(2,2)*dN(2,k);
-                        
-                        % Fill B matrix
-                        idx = (k-1)*3 + (1:3);
-                        B(:,idx) = [dNdx,    0,  0;
-                                  0,    dNdy,  0;
-                                  dNdy,  dNdx,  0];
-                    end
-                    
-                    % Shape functions for mass matrix
-                    N = zeros(3,12);
-                    for k = 1:4
-                        N_k = (1 + xi(i)*xi_nodes(k))*(1 + eta(j)*eta_nodes(k))/4;
-                        idx = (k-1)*3 + (1:3);
-                        N(:,idx) = eye(3)*N_k;
-                    end
-                    
-                    % Mass matrix contribution
-                    Me = Me + rho*t*N'*N*detJ*w(i)*w(j);
-                    
-                    % Stiffness matrix contribution
-                    Ke = Ke + t*B'*D*B*detJ*w(i)*w(j);
-                end
-            end
-            
-            % Add bending stiffness
-            D_bend = E*t^3/(12*(1-nu^2)) * [1 nu 0; nu 1 0; 0 0 (1-nu)/2];
-            for k = 1:4
-                idx = (k-1)*3 + 3;  % w-DOF
-                Ke(idx,idx) = Ke(idx,idx) + D_bend(1,1);
-            end
-            
-            % Add small regularization term to improve numerical stability
-            eps = 1e-10;
-            Ke = Ke + eps*eye(size(Ke));
         end
     end
 end

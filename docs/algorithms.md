@@ -3,6 +3,7 @@
 ## Modal Analysis Algorithms
 
 ### 1. Subspace Iteration
+
 ```matlab
 classdef SubspaceIterator < handle
     % Implementation of subspace iteration for modal analysis
@@ -84,6 +85,7 @@ end
 ```
 
 ### 2. Block Lanczos
+
 ```matlab
 classdef BlockLanczos < handle
     % Block Lanczos algorithm for large-scale eigenproblems
@@ -191,6 +193,7 @@ end
 ## Nonlinear Solution Algorithms
 
 ### 1. Arc-Length Method
+
 ```matlab
 classdef ArcLengthSolver < handle
     % Arc-length method for nonlinear analysis
@@ -283,6 +286,7 @@ end
 ```
 
 ### 2. Trust Region Algorithm
+
 ```matlab
 classdef TrustRegionOptimizer < handle
     % Trust region algorithm for optimization
@@ -401,6 +405,7 @@ end
 ## Advanced Material Algorithms
 
 ### 1. Return Mapping Algorithm
+
 ```matlab
 classdef ReturnMapping < handle
     % Return mapping algorithm for elastoplastic materials
@@ -501,6 +506,7 @@ end
 ## Advanced Numerical Methods
 
 ### 1. Adaptive Time Integration
+
 ```matlab
 classdef AdaptiveTimeIntegrator < handle
     % Adaptive time integration with error control
@@ -610,6 +616,7 @@ end
 ```
 
 ### 2. Multi-Scale Homogenization
+
 ```matlab
 classdef MicroScaleHomogenizer < handle
     % Microscale homogenization for composite materials
@@ -738,6 +745,7 @@ end
 ```
 
 ### 3. Contact Detection Algorithm
+
 ```matlab
 classdef ContactDetector < handle
     % Contact detection and force computation

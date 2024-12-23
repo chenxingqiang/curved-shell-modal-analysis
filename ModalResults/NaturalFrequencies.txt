@@ -1,25 +1,30 @@
-曲面板模态分析结果
+Modal Analysis Results for Composite Shell
+=====================================
 
-几何参数:
-长度: 0.400 m
-宽度: 0.300 m
-厚度: 0.002 m
-曲率半径: 0.500 m
+Shell Parameters:
+- Length: 0.400 m
+- Width: 0.300 m
+- Radius: 0.500 m
+- Total Thickness: 0.008 m
+- Number of Layers: 4
+- Layer Angles: [0  45 -45  90]
 
-材料属性:
-弹性模量: 2.10e+11 Pa
-密度: 7800.0 kg/m³
-泊松比: 0.30
-阻尼比: 0.020
+Material Properties:
+- E1: 1.40e+11 Pa
+- E2: 1.00e+10 Pa
+- G12: 5.00e+09 Pa
+- nu12: 0.30
+- Density: 1600.0 kg/m³
 
-前6阶固有频率:
-第1阶: 896.67 Hz
-第2阶: 896.67 Hz
-第3阶: 897.20 Hz
-第4阶: 897.23 Hz
-第5阶: 898.07 Hz
-第6阶: 898.13 Hz
+Natural Frequencies:
+Mode 1: 5112.87 Hz
+Mode 2: 5162.54 Hz
+Mode 3: 5237.84 Hz
+Mode 4: 5328.86 Hz
+Mode 5: 5427.12 Hz
+Mode 6: 5475.93 Hz
 
-阻尼参数:
-α (质量比例系数): 3.589583e+01
-β (刚度比例系数): 4.457342e-05
+Statistical Summary:
+- Mean Frequency: 5290.9 Hz
+- Standard Deviation: 145.1 Hz
+- Maximum Frequency: 5475.9 Hz

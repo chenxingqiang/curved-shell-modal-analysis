@@ -3,6 +3,7 @@
 ## Unit Tests
 
 ### 1. Modal Analysis Tests
+
 ```matlab
 classdef ModalAnalysisTest < matlab.unittest.TestCase
     % Unit tests for modal analysis
@@ -93,6 +94,7 @@ end
 ```
 
 ### 2. Material Model Tests
+
 ```matlab
 classdef MaterialModelTest < matlab.unittest.TestCase
     % Unit tests for material models
@@ -186,6 +188,7 @@ end
 ## Integration Tests
 
 ### 1. Full Analysis Pipeline
+
 ```matlab
 classdef FullAnalysisTest < matlab.unittest.TestCase
     % Integration tests for complete analysis pipeline
@@ -253,6 +256,7 @@ end
 ## Performance Tests
 
 ### 1. Computational Efficiency
+
 ```matlab
 classdef PerformanceTest < matlab.unittest.TestCase
     % Performance tests for computational efficiency
@@ -314,6 +318,7 @@ end
 ## Validation Tests
 
 ### 1. Analytical Solutions
+
 ```matlab
 classdef ValidationTest < matlab.unittest.TestCase
     % Validation tests against analytical solutions
@@ -382,6 +387,7 @@ end
 ```
 
 ### 2. Benchmark Problems
+
 ```matlab
 classdef BenchmarkTest < matlab.unittest.TestCase
     % Tests against standard benchmark problems
@@ -457,6 +463,7 @@ end
 ```
 
 ## Advanced Validation Cases
+
 ```matlab
 classdef AdvancedValidationTest < matlab.unittest.TestCase
     % Advanced validation tests against complex analytical solutions
@@ -641,6 +648,7 @@ end
 ```
 
 ## Performance Benchmarks
+
 ```matlab
 classdef PerformanceBenchmark < matlab.unittest.TestCase
     % Performance benchmarks for computational efficiency

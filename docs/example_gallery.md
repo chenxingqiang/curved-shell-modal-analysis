@@ -3,7 +3,9 @@
 ## Modal Analysis Examples
 
 ### Spherical Shell Modes
+
 ![Spherical Shell Modes](images/sphere_modes.png)
+
 ```matlab
 % Create spherical shell
 params = struct('R', 0.5, 't', 0.002, 'E', 2.1e11, 'rho', 7800, 'nu', 0.3);
@@ -18,7 +20,9 @@ modal.plotModes(1:6, 'subplot');
 ```
 
 ### Cylindrical Shell Breathing Modes
+
 ![Cylinder Breathing Modes](images/cylinder_breathing.png)
+
 ```matlab
 % Create cylindrical shell
 params = struct('R', 0.2, 'L', 1.0, 't', 0.001);
@@ -32,7 +36,9 @@ modal.findBreathingModes();
 ## Nonlinear Analysis Examples
 
 ### Large Deformation
+
 ![Large Deformation](images/large_deform.png)
+
 ```matlab
 % Nonlinear analysis of cylinder under pressure
 cylinder = CurvedShellAnalysis.CylindricalSurface(params);
@@ -44,7 +50,9 @@ nonlinear.plotDeformation('scale', 2);
 ```
 
 ### Snap-Through Buckling
+
 ![Snap-Through](images/snap_through.png)
+
 ```matlab
 % Shallow spherical cap under point load
 cap = CurvedShellAnalysis.SphericalCap(params);
@@ -60,7 +68,9 @@ nonlinear.plotLoadDisplacement();
 ## Thermal-Structural Examples
 
 ### Thermal Stress
+
 ![Thermal Stress](images/thermal_stress.png)
+
 ```matlab
 % Temperature gradient in sphere
 sphere = CurvedShellAnalysis.SphericalSurface(params);
@@ -73,7 +83,9 @@ thermal.plotThermalStress('vonMises');
 ```
 
 ### Transient Thermal
+
 ![Transient Thermal](images/transient_thermal.png)
+
 ```matlab
 % Time-dependent heating
 thermal.setTimeDependent(true);
@@ -85,7 +97,9 @@ thermal.animateTemperature();
 ## Composite Examples
 
 ### Layup Analysis
+
 ![Composite Layup](images/composite_layup.png)
+
 ```matlab
 % Define composite layup
 layup = struct();
@@ -104,7 +118,9 @@ composite.plotStressDistribution();
 ```
 
 ### Failure Analysis
+
 ![Failure Indices](images/failure_indices.png)
+
 ```matlab
 % Add multiple failure criteria
 composite.addFailureCriterion('tsai_wu');
@@ -119,7 +135,9 @@ composite.plotFailureIndices('subplot');
 ## Optimization Examples
 
 ### Shape Optimization
+
 ![Shape Optimization](images/shape_opt.png)
+
 ```matlab
 % Optimize sphere radius and thickness
 problem = struct();
@@ -133,7 +151,9 @@ opt.plotConvergence();
 ```
 
 ### Multi-Objective Optimization
+
 ![Pareto Front](images/pareto_front.png)
+
 ```matlab
 % Weight vs. stiffness optimization
 problem.objectives = {'weight', 'compliance'};
@@ -145,7 +165,9 @@ opt.plotPareto();
 ## Advanced Visualization
 
 ### Mode Animation
+
 ![Mode Animation](images/mode_animation.gif)
+
 ```matlab
 % Animate mode shape
 modal = CurvedShellAnalysis.ModalAnalysis(sphere, 1);
@@ -154,7 +176,9 @@ modal.animateMode(1, 'cycles', 2, 'fps', 30);
 ```
 
 ### Stress Contours
+
 ![Stress Contours](images/stress_contours.png)
+
 ```matlab
 % Plot stress with custom options
 analysis.plotStress('vonMises', ...
@@ -164,7 +188,9 @@ analysis.plotStress('vonMises', ...
 ```
 
 ### Interactive 3D View
+
 ![Interactive View](images/interactive_view.png)
+
 ```matlab
 % Create interactive visualization
 viewer = CurvedShellAnalysis.ResultViewer(analysis);

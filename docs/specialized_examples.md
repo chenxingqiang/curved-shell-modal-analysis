@@ -3,6 +3,7 @@
 ## Advanced Shell Configurations
 
 ### 1. Stiffened Shell Analysis
+
 ```matlab
 % Create stiffened cylindrical shell
 params = struct();
@@ -45,6 +46,7 @@ modal.plotMode(1, 'ShowStiffeners', true);
 ```
 
 ### 2. Multi-Layer Composite Dome
+
 ```matlab
 % Create composite spherical dome
 params = struct();
@@ -90,6 +92,7 @@ nonlinear.plotDelamination();
 ```
 
 ### 3. Thermal-Acoustic Analysis
+
 ```matlab
 % Create coupled thermal-acoustic analysis
 params = struct();
@@ -124,6 +127,7 @@ system.plotCoupledResponse();
 ```
 
 ### 4. Shape Memory Alloy Shell
+
 ```matlab
 % Create shell with SMA material
 params = struct();
@@ -170,6 +174,7 @@ analysis.plotStressStrain();
 ```
 
 ### 5. Functionally Graded Shell
+
 ```matlab
 % Create functionally graded shell
 params = struct();
@@ -207,6 +212,7 @@ thermal.plotMaterialDistribution();
 ```
 
 ### 6. Piezoelectric Shell Control
+
 ```matlab
 % Create smart shell with piezoelectric patches
 params = struct();
