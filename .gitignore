@@ -3,7 +3,7 @@
 *.m~
 *.mex*
 *.mat
-*.fig
+*.png
 slprj/
 sccprj/
 codegen/

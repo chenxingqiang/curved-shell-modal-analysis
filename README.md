@@ -19,6 +19,33 @@ A comprehensive MATLAB package for modal analysis of curved surfaces, including 
 |-------------------|-------------------|-------------------|
 | ![Mode 4](docs/images/mode_4_89723_hz.png) | ![Mode 5](docs/images/mode_5_89807_hz.png) | ![Mode 6](docs/images/mode_6_89813_hz.png) |
 
+### Advanced Analysis Results
+
+#### Comparative Modal Analysis
+![Comparative Modes](docs/images/comparative_modes.png)
+*Comparison of mode shapes between different surface types*
+
+#### Composite Shell Analysis
+![Composite Modes](docs/images/composite_modes.png)
+*Modal analysis results for composite shell structures*
+
+#### Dynamic Response Analysis
+![Dynamic Response](docs/images/dynamic_response.png)
+*Time-domain response under dynamic loading*
+
+#### Frequency Analysis
+| Frequency Response Function | MAC Matrix Analysis |
+|----------------------------|---------------------|
+| ![FRF Analysis](docs/images/FRF.png) | ![MAC Matrices](docs/images/mac_matrices.png) |
+
+#### Strain Energy Distribution
+![Strain Energy](docs/images/strain_energy.png)
+*Strain energy distribution during modal deformation*
+
+#### Thermal Effects
+![Thermal Deformation](docs/images/thermal_deformation.png)
+*Thermal-structural coupling analysis results*
+
 ## Features
 
 ### Modal Analysis

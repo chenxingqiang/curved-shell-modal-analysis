@@ -111,7 +111,7 @@ plot(time, p_monitor);
 xlabel('Time (s)');
 ylabel('Pressure (Pa)');
 title('Pressure History at Monitor Point');
-savefig('results/pressure_history.fig');
+savefig('results/pressure_history.png');
 
 % Plot displacement history
 figure('Name', 'Displacement History');
@@ -122,7 +122,7 @@ xlabel('Time (s)');
 ylabel('Displacement (m)');
 legend('x', 'y', 'z');
 title('Tip Displacement History');
-savefig('results/displacement_history.fig');
+savefig('results/displacement_history.png');
 
 % Save results
 save('results/fsi_results.mat', 'time', 'p_hist', 'u_hist', 'f_hist');
